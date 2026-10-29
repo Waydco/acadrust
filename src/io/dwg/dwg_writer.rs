@@ -68,7 +68,7 @@ impl DwgWriter {
             output.write_all(&bytes)?;
             return Ok(());
         }
-        let mut prepared = crate::io::loft_parameters::prepared(document);
+        let mut prepared = crate::io::loft_parameters::prepared(document, true);
         prepare_surface_classes(&mut prepared);
         prepare_database_references(&mut prepared);
         prepare_table_keys(&mut prepared);
@@ -158,7 +158,7 @@ impl DwgWriter {
     ) -> Result<()> {
         validate_unknown_records(document)?;
         validate_version(document.version)?;
-        let mut prepared = crate::io::loft_parameters::prepared(document);
+        let mut prepared = crate::io::loft_parameters::prepared(document, true);
         prepare_surface_classes(&mut prepared);
         prepare_database_references(&mut prepared);
         prepare_table_keys(&mut prepared);

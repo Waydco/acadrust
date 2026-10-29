@@ -264,7 +264,7 @@ impl<'a> DxfWriter<'a> {
         writer: &mut W,
         output_version: crate::types::DxfVersion,
     ) -> Result<()> {
-        let mut prepared = crate::io::loft_parameters::prepared(self.document);
+        let mut prepared = crate::io::loft_parameters::prepared(self.document, false);
         // DXF and DWG share the same ownership graph. Repair table-backed
         // entities before either writer snapshots handles, otherwise an
         // ACAD_TABLE can emit a null/nonexistent block-record pointer.
