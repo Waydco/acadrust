@@ -782,7 +782,10 @@ mod tests {
             r"\U+0411"
         );
         // A bare row names no code page, so it asks nothing.
-        assert_eq!(decode_cif_escapes_in(r"94\U+00B0", encoding_rs::WINDOWS_1252), "94\u{B0}");
+        assert_eq!(
+            decode_cif_escapes_in(r"94\U+00B0", encoding_rs::WINDOWS_1252),
+            "94\u{B0}"
+        );
         // UTF-8 holds every character, so its escapes are text.
         assert_eq!(
             decode_cif_escapes_in(r"\U+0041", encoding_rs::UTF_8),

@@ -3968,11 +3968,19 @@ mod section_recovery_tests {
 /// Ported from CADCraft's DWG bridge (storytold/cadcraft #1051; MIT OR Apache-2.0).
 fn current_style_names(doc: &mut crate::document::CadDocument) {
     let h = doc.header.current_text_style_handle;
-    if let Some(s) = doc.text_styles.iter().find(|s| !h.is_null() && s.handle == h) {
+    if let Some(s) = doc
+        .text_styles
+        .iter()
+        .find(|s| !h.is_null() && s.handle == h)
+    {
         doc.header.current_text_style_name = s.name.clone();
     }
     let h = doc.header.current_dimstyle_handle;
-    if let Some(s) = doc.dim_styles.iter().find(|s| !h.is_null() && s.handle == h) {
+    if let Some(s) = doc
+        .dim_styles
+        .iter()
+        .find(|s| !h.is_null() && s.handle == h)
+    {
         doc.header.current_dimstyle_name = s.name.clone();
     }
 }
