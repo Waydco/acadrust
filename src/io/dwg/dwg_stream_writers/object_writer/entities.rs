@@ -5192,7 +5192,7 @@ impl<'a> DwgObjectWriter<'a> {
         let tail_written = if acds {
             // AC1027+: ACIS data is stored in the AcDsPrototype_1b section.
             // Entity stream writes acis_empty=true with no inline data.
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5223,7 +5223,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         let acds = self.needs_acds_section();
         let tail_written = if acds {
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5253,7 +5253,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         let acds = self.needs_acds_section();
         let tail_written = if acds {
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5351,7 +5351,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         let acds = self.needs_acds_section();
         let tail_written = if acds {
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5514,20 +5514,26 @@ impl<'a> DwgObjectWriter<'a> {
     ///
     /// For R2013 and later, ACIS data lives in the AcDsPrototype_1b section.
     /// The entity stream indicates that modeler geometry is not inline, but its
-    fn write_acis_empty(&mut self, acis: &AcisData) {
+    fn write_acis_empty(&mut self, point: Vector3, acis: &AcisData) {
         // R2013+ AcDs-backed records no longer carry the legacy leading
         // `acis_empty` bit.  Their first modeler-geometry bit is the
         // wireframe-presence flag.
         //
-        // Only the cache header is kept: no reference point, wires or
-        // silhouettes. An application-built point or wire list here makes
-        // the reference application's console engine reject the whole
-        // drawing, and the display cache is rebuilt from the body anyway.
+        // Only the cache header is kept: no wires or silhouettes, and no
+        // reference point unless the source file stored one. An
+        // application-built point or wire list here makes the reference
+        // application's console engine reject the whole drawing, and the
+        // display cache is rebuilt from the body anyway. A point read from
+        // the file is written back as it was, so unchanged drawings
+        // round-trip.
         self.writer.write_bit(acis.wireframe_data_present);
         if !acis.wireframe_data_present {
             return;
         }
-        self.writer.write_bit(false); // point_present
+        self.writer.write_bit(acis.wireframe_point_present);
+        if acis.wireframe_point_present {
+            self.writer.write_3bit_double(point);
+        }
         self.writer.write_bit_long(acis.wireframe_isolines);
         self.writer.write_bit(acis.wireframe_isoline_present);
         if acis.wireframe_isoline_present {
