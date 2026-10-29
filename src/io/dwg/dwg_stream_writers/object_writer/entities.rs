@@ -1779,8 +1779,10 @@ impl<'a> DwgObjectWriter<'a> {
             self.writer.write_3bit_double(*pt);
         }
 
-        // Origin 3BD (first vertex by default)
-        let origin = if e.origin == Vector3::ZERO {
+        // Origin 3BD. Leaders built in code or read from DXF (which does not
+        // store it) default to the first vertex; a drawing read from DWG
+        // keeps the origin it stored, zero included.
+        let origin = if e.origin == Vector3::ZERO && self.document.dwg_source_version.is_none() {
             e.vertices.first().copied().unwrap_or(Vector3::ZERO)
         } else {
             e.origin
