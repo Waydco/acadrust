@@ -1437,7 +1437,8 @@ pub fn read_spline(
         }
     }
 
-    if scenario != 1 && !closed && fit_points.len() >= 3 && fit_points.first() == fit_points.last() {
+    if scenario != 1 && !closed && fit_points.len() >= 3 && fit_points.first() == fit_points.last()
+    {
         closed = true;
     }
 

@@ -1779,8 +1779,10 @@ impl<'a> DwgObjectWriter<'a> {
             self.writer.write_3bit_double(*pt);
         }
 
-        // Origin 3BD (first vertex by default)
-        let origin = if e.origin == Vector3::ZERO {
+        // Origin 3BD. Leaders built in code or read from DXF (which does not
+        // store it) default to the first vertex; a drawing read from DWG
+        // keeps the origin it stored, zero included.
+        let origin = if e.origin == Vector3::ZERO && self.document.dwg_source_version.is_none() {
             e.vertices.first().copied().unwrap_or(Vector3::ZERO)
         } else {
             e.origin
@@ -2316,12 +2318,9 @@ impl<'a> DwgObjectWriter<'a> {
         // Status/UCS data (written for all versions)
         // Frozen layer count BL
         self.writer.write_bit_long(e.frozen_layers.len() as i32);
-        // Status flags BL 90
-        let grid_bits = if self.version.r2007_plus() {
-            i32::from(e.grid_flags.to_bits()) << 18
-        } else {
-            0
-        };
+        // Status flags BL 90. Grid behavior lives in bits 18..21 in every
+        // version; the reader takes it from there, so keep it on write.
+        let grid_bits = i32::from(e.grid_flags.to_bits()) << 18;
         self.writer.write_bit_long(e.status.to_bits() | grid_bits);
         // Style Sheet TV 1
         self.writer.write_variable_text(&e.style_sheet);
@@ -5195,7 +5194,7 @@ impl<'a> DwgObjectWriter<'a> {
         let tail_written = if acds {
             // AC1027+: ACIS data is stored in the AcDsPrototype_1b section.
             // Entity stream writes acis_empty=true with no inline data.
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5226,7 +5225,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         let acds = self.needs_acds_section();
         let tail_written = if acds {
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5256,7 +5255,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         let acds = self.needs_acds_section();
         let tail_written = if acds {
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5354,7 +5353,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         let acds = self.needs_acds_section();
         let tail_written = if acds {
-            self.write_acis_empty(&e.acis_data);
+            self.write_acis_empty(e.point_of_reference, &e.acis_data);
             self.queue_sab_entry(&e.acis_data, e.common.handle);
             false
         } else {
@@ -5517,20 +5516,26 @@ impl<'a> DwgObjectWriter<'a> {
     ///
     /// For R2013 and later, ACIS data lives in the AcDsPrototype_1b section.
     /// The entity stream indicates that modeler geometry is not inline, but its
-    fn write_acis_empty(&mut self, acis: &AcisData) {
+    fn write_acis_empty(&mut self, point: Vector3, acis: &AcisData) {
         // R2013+ AcDs-backed records no longer carry the legacy leading
         // `acis_empty` bit.  Their first modeler-geometry bit is the
         // wireframe-presence flag.
         //
-        // Only the cache header is kept: no reference point, wires or
-        // silhouettes. An application-built point or wire list here makes
-        // the reference application's console engine reject the whole
-        // drawing, and the display cache is rebuilt from the body anyway.
+        // Only the cache header is kept: no wires or silhouettes, and no
+        // reference point unless the source file stored one. An
+        // application-built point or wire list here makes the reference
+        // application's console engine reject the whole drawing, and the
+        // display cache is rebuilt from the body anyway. A point read from
+        // the file is written back as it was, so unchanged drawings
+        // round-trip.
         self.writer.write_bit(acis.wireframe_data_present);
         if !acis.wireframe_data_present {
             return;
         }
-        self.writer.write_bit(false); // point_present
+        self.writer.write_bit(acis.wireframe_point_present);
+        if acis.wireframe_point_present {
+            self.writer.write_3bit_double(point);
+        }
         self.writer.write_bit_long(acis.wireframe_isolines);
         self.writer.write_bit(acis.wireframe_isoline_present);
         if acis.wireframe_isoline_present {
@@ -6043,8 +6048,8 @@ mod tests {
     // expects, built field by field with a writer of the same version.
 
     use crate::entities::table::{CellContent, CellStyle, TableCell};
-    use crate::io::dwg::DwgVersion;
     use crate::io::dwg::dwg_stream_writers::bit_writer::DwgBitWriter;
+    use crate::io::dwg::DwgVersion;
     use crate::types::Color;
 
     fn cell_main_stream(version: DxfVersion, cell: &TableCell) -> Vec<u8> {
@@ -6077,7 +6082,10 @@ mod tests {
         cell_head(&mut r, 1);
         r.write_variable_text("");
         r.write_bit(false); // no style
-        assert_eq!(cell_main_stream(DxfVersion::AC1015, &cell), r.to_bytes_snapshot());
+        assert_eq!(
+            cell_main_stream(DxfVersion::AC1015, &cell),
+            r.to_bytes_snapshot()
+        );
     }
 
     #[test]
@@ -6088,7 +6096,10 @@ mod tests {
         let mut r = reference(DxfVersion::AC1018);
         cell_head(&mut r, 1);
         r.write_bit(false); // no style, and no text: the reader sees handle 0x55
-        assert_eq!(cell_main_stream(DxfVersion::AC1018, &cell), r.to_bytes_snapshot());
+        assert_eq!(
+            cell_main_stream(DxfVersion::AC1018, &cell),
+            r.to_bytes_snapshot()
+        );
     }
 
     #[test]
@@ -6106,6 +6117,9 @@ mod tests {
         r.write_bit_long(0x08);
         r.write_byte(0); // virtual edge
         r.write_cm_true_color(&Color::Index(5));
-        assert_eq!(cell_main_stream(DxfVersion::AC1015, &cell), r.to_bytes_snapshot());
+        assert_eq!(
+            cell_main_stream(DxfVersion::AC1015, &cell),
+            r.to_bytes_snapshot()
+        );
     }
 }

@@ -16256,7 +16256,8 @@ impl<'a> SectionReader<'a> {
 
         // Read control points (codes 10/20, with optional weight 42)
         let control_point_count = num_control_points.max(0) as usize;
-        edge.control_points.reserve(control_point_count.min(100_000));
+        edge.control_points
+            .reserve(control_point_count.min(100_000));
         for _ in 0..control_point_count {
             let mut x = 0.0;
             let mut y = 0.0;
@@ -16772,6 +16773,8 @@ impl<'a> SectionReader<'a> {
         let bp = base_point.get_point().unwrap_or(Vector3::zero());
         let dir = direction.get_point().unwrap_or(Vector3::new(1.0, 0.0, 0.0));
         let mut ray = Ray::new(bp, dir);
+        // Keep the stored direction exactly; new() normalizes it.
+        ray.direction = dir;
         // True color from code 420 overrides ACI
         if common.color.is_true_color() {
             color = common.color;
@@ -16819,6 +16822,8 @@ impl<'a> SectionReader<'a> {
         let bp = base_point.get_point().unwrap_or(Vector3::zero());
         let dir = direction.get_point().unwrap_or(Vector3::new(1.0, 0.0, 0.0));
         let mut xline = XLine::new(bp, dir);
+        // Keep the stored direction exactly; new() normalizes it.
+        xline.direction = dir;
         // True color from code 420 overrides ACI
         if common.color.is_true_color() {
             color = common.color;

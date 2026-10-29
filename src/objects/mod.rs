@@ -875,7 +875,10 @@ mod tests {
 
         // remove_entry
         assert_eq!(dict.remove_entry("NonExistent"), None);
-        assert_eq!(dict.remove_entry("BETA"), Some(("Beta".to_string(), Handle::new(30))));
+        assert_eq!(
+            dict.remove_entry("BETA"),
+            Some(("Beta".to_string(), Handle::new(30)))
+        );
         assert!(dict.is_empty());
 
         // iterators and clear
@@ -886,7 +889,10 @@ mod tests {
         let values: Vec<Handle> = dict.values().collect();
         assert_eq!(values, vec![Handle::new(1), Handle::new(2)]);
         let pairs: Vec<(&str, Handle)> = dict.iter().collect();
-        assert_eq!(pairs, vec![("One", Handle::new(1)), ("Two", Handle::new(2))]);
+        assert_eq!(
+            pairs,
+            vec![("One", Handle::new(1)), ("Two", Handle::new(2))]
+        );
 
         dict.clear();
         assert!(dict.is_empty());

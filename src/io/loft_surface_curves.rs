@@ -22,7 +22,9 @@ pub(crate) fn has_inputs(document: &CadDocument) -> bool {
             || has_record(document, surface.common.xdictionary_handle, REFERENCE_KEY))))
 }
 
-pub(crate) fn store(document: &mut CadDocument) {
+/// With `native` set, inputs the surface record itself carries are not copied
+/// into a fallback record; an existing fallback record is still kept current.
+pub(crate) fn store(document: &mut CadDocument, native: bool) {
     store_references(document);
     let inputs = document
         .entities()
@@ -39,11 +41,15 @@ pub(crate) fn store(document: &mut CadDocument) {
             else {
                 return None;
             };
+            let has_fallback = has_record(document, surface.common.xdictionary_handle, KEY);
             if cross_section_entities.is_empty()
                 && guide_entities.is_empty()
                 && path_entity.is_none()
-                && !has_record(document, surface.common.xdictionary_handle, KEY)
+                && !has_fallback
             {
+                return None;
+            }
+            if native && !has_fallback {
                 return None;
             }
             Some((

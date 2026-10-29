@@ -227,7 +227,9 @@ impl Spline {
             return true;
         };
 
-        points.iter().all(|p| ((*p - p0).dot(&plane_normal)).abs() < 1e-4)
+        points
+            .iter()
+            .all(|p| ((*p - p0).dot(&plane_normal)).abs() < 1e-4)
     }
 
     /// Convert a periodic cubic B-spline with DWG periodic knot vector (knots.len() == control_points.len() + 1)

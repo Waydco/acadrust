@@ -95,3 +95,28 @@ fn grid_behavior_survives_dxf_and_dwg_readback() {
         }
     }
 }
+
+#[test]
+fn grid_behavior_survives_dwg_readback_before_r2007() {
+    // The reader takes grid behavior from status bits 18..21 in every DWG
+    // version, so the writer must keep them there too.
+    for version in [
+        acadrust::types::DxfVersion::AC1015,
+        acadrust::types::DxfVersion::AC1018,
+    ] {
+        for bits in 0..16i16 {
+            let mut doc = drawing(bits);
+            doc.version = version;
+            let dwg = DwgReader::from_stream(Cursor::new(DwgWriter::write_to_vec(&doc).unwrap()))
+                .read()
+                .unwrap();
+            let view = viewport(&dwg);
+            assert_eq!(
+                view.grid_flags.to_bits(),
+                bits,
+                "{version:?} grid flags {bits}"
+            );
+            assert_eq!(view.status.to_bits(), NON_GRID_FLAGS, "{version:?}");
+        }
+    }
+}

@@ -301,7 +301,11 @@ pub(super) fn remove_record(document: &mut CadDocument, dictionary: &mut Diction
 
 /// Work only on an output copy. Saving must not add history/undo edits to the
 /// live document, and copied history nodes must not share mutable settings.
-pub(crate) fn prepared(document: &CadDocument) -> Cow<'_, CadDocument> {
+///
+/// `native_loft_inputs` is true when the target format writes lofted-surface
+/// cross sections, guides and paths in the surface record itself (DWG). Those
+/// then need no fallback copy in the surface's extension dictionary.
+pub(crate) fn prepared(document: &CadDocument, native_loft_inputs: bool) -> Cow<'_, CadDocument> {
     let settings = document
         .objects
         .iter()
@@ -372,7 +376,7 @@ pub(crate) fn prepared(document: &CadDocument) -> Cow<'_, CadDocument> {
             .objects
             .insert(dictionary.handle, ObjectType::Dictionary(dictionary));
     }
-    super::loft_surface_curves::store(&mut output);
+    super::loft_surface_curves::store(&mut output, native_loft_inputs);
     super::surface_history::store(&mut output);
     Cow::Owned(output)
 }

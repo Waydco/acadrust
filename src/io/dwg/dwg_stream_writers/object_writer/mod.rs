@@ -549,6 +549,7 @@ impl<'a> DwgObjectWriter<'a> {
 
         // ── Block entities ──────────────────────────────────────
         self.write_block_entities();
+        self.write_object_owned_entities();
 
         // ── Drain object queue ──────────────────────────────────
         self.write_objects();
@@ -1936,6 +1937,37 @@ impl<'a> DwgObjectWriter<'a> {
     // ── Block entity writing ────────────────────────────────────────
 
     /// Write block begin/entities/end for every block record.
+    /// Write entities whose owner is a non-graphical object (for example a
+    /// dictionary) rather than a block record. Block walking never reaches
+    /// them, and without this they would be dropped on save. Entities owned
+    /// by a block record but missing from its list are left alone: an xref
+    /// block deliberately writes none of its merged contents.
+    fn write_object_owned_entities(&mut self) {
+        let document = self.document;
+        let handles: Vec<Handle> = document
+            .entities()
+            .filter(|entity| {
+                let owner = entity.common().owner_handle;
+                !owner.is_null()
+                    && matches!(
+                        document.objects.get(&owner),
+                        Some(ObjectType::Dictionary(_))
+                    )
+                    && !self
+                        .registered_handles
+                        .contains(&entity.common().handle.value())
+            })
+            .map(|entity| entity.common().handle)
+            .collect();
+        self.prev_handle = None;
+        self.next_handle = None;
+        for handle in handles {
+            if let Some(&idx) = document.entity_index.get(&handle) {
+                self.write_entity(&document.entities[idx]);
+            }
+        }
+    }
+
     fn write_block_entities(&mut self) {
         use crate::io::dwg::parallel::{map_chunks, worker_count};
 

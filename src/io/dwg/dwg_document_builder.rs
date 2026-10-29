@@ -4047,12 +4047,16 @@ impl DwgDocumentBuilder {
                 OBJ_RAY => {
                     let data = entities::read_ray(&mut reader);
                     let mut e = Ray::new(data.base_point, data.direction);
+                    // Keep the stored direction exactly; new() normalizes it.
+                    e.direction = data.direction;
                     e.common = entity_common;
                     let _ = document.add_entity(EntityType::Ray(e));
                 }
                 OBJ_XLINE => {
                     let data = entities::read_xline(&mut reader);
                     let mut e = XLine::new(data.base_point, data.direction);
+                    // Keep the stored direction exactly; new() normalizes it.
+                    e.direction = data.direction;
                     e.common = entity_common;
                     let _ = document.add_entity(EntityType::XLine(e));
                 }

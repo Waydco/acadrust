@@ -4683,8 +4683,7 @@ impl<'a, W: DxfStreamWriter> SectionWriter<'a, W> {
 
         self.writer.write_i16(71, spline.degree as i16)?;
         self.writer.write_i16(72, knots.len() as i16)?;
-        self.writer
-            .write_i16(73, control_points.len() as i16)?;
+        self.writer.write_i16(73, control_points.len() as i16)?;
         self.writer.write_i16(74, spline.fit_points.len() as i16)?;
 
         // Knot / control-point / fit tolerances (round-trip the stored values).
